@@ -35,3 +35,8 @@ $ mv YOUR_DATASET_LOCATION/data_object_image_2/training/image_2 \ YOUR_PROJECT_R
 
 $ mv YOUR_DATASET_LOCATION/data_object_image_2/testing/image_2 \  YOUR_PROJECT_ROOT_DIR/dataset/testing/image_sets
 ```
+
+### 1.4 Test DataLoader
+```bash
+python src/main.py --modein --cfg yolov3_kitti.cfg
+```
