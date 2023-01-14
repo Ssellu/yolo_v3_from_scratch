@@ -38,5 +38,24 @@ $ mv YOUR_DATASET_LOCATION/data_object_image_2/testing/image_2 \  YOUR_PROJECT_R
 
 ### 1.4 Test DataLoader
 ```bash
-python src/main.py --modein --cfg yolov3_kitti.cfg
+$ python src/main.py --mode train --cfg yolov3_kitti.cfg
 ```
+
+## Image Augmentation
+**Image Augmentation** is converting images into a new, much larger amount of images slighty altered.
+This model uses [imgaug](https://www.github.com/aleju/imgaug) opensource library. To download the library,
+```bash
+pip install imgaug
+```
+
+```python
+if is_train:
+    data_transform = tf.Compose(
+        [AbsoluteLabels(),
+         DefaultAug(),
+         RelativeLabels(),
+         ResizeImage(new_size=(cfg_param['width'], cfg_param['height'])),
+         ToTensor(),
+        ])
+```
+

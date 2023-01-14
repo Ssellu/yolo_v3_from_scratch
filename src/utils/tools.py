@@ -1,3 +1,8 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+from PIL import Image, ImageDraw
+
 class YOLOV3Props:
     def __init__(self, path) -> None:
         self.module_defs = []
@@ -45,3 +50,22 @@ class YOLOV3Props:
             lines = [ln.strip() for ln in file.readlines()
                      if ln.strip() and not ln.startswith('#')]
         return lines
+
+def xywh2xyxy_np(x : np.array):
+    y = np.zeros_like(x)
+    y[...,0] = (x[...,0] - x[...,2]) / 2  # min_x
+    y[...,1] = (x[...,1] - x[...,3]) / 2  # min_y
+    y[...,2] = (x[...,0] + x[...,2]) / 2  # max_y
+    y[...,3] = (x[...,1] + x[...,3]) / 2  # max_y
+    return y
+
+def drawBox(img):
+    img *= 255
+    if img.shape[0]  == 3:
+        img_data = np.array(np.transpose(img, (1,2,0)), dtype=np.uint8)
+        img_data = Image.fromarray(img_data)
+
+    draw = ImageDraw.Draw(img_data)
+
+    plt.imshow(img_data)
+    plt.show()

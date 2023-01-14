@@ -1,12 +1,12 @@
 import torch
 import argparse
 import sys
-
+import cv2
 from torch.utils.data.dataloader import DataLoader
 
 from utils.tools import *
 from dataloader.yolodata import *
-
+from dataloader.data_transforms import *
 
 class Main:
     def __init__(self) -> None:
@@ -37,8 +37,9 @@ class Main:
         return args
 
     def train(self):
+        my_transform = get_transformations(cfg_param=self.cfg_param, is_train=True)
         train_data = Yolodata(is_train=True,
-                              transform=None,
+                              transform=my_transform,
                               cfg_param=self.cfg_param)
 
         # DataLoader for 6081 images with 4 batches
@@ -54,6 +55,7 @@ class Main:
         for i, batch in enumerate(train_loader):
             img, targets, anno_path = batch
             print('iter : {}, {}, {}'.format(img, targets, anno_path))
+            drawBox(img=img[0].detach().cpu())
 
     def eval(self):
         Yolodata(is_train=False, cfg_param=self.cfg_param)

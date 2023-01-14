@@ -62,15 +62,15 @@ class Yolodata(Dataset):
 
         with open(annotation_path, 'r') as file:
             for line in file.readlines():
-                bounding_box = np.array([[float(n)] for n in line.split(' ')])
+                bounding_box = np.array([[float(n)] for n in line.split(' ')]).reshape(1, 5)
 
-            # Skip empty target
+            # Skip empty target, 0, 0, 0, 0)]).shape))
             empty_target = False
             if bounding_box.shape[0] == 0:
                 empty_target = True
                 bounding_box = np.array([(0, 0, 0, 0, 0)])
 
-            # Data aguementation
+            # Data augmentation
             if self.transform is not None:
                 img, bounding_box = self.transform((img, bounding_box))
 
