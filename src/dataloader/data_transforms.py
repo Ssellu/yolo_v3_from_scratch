@@ -92,7 +92,6 @@ class ImageAug(object):
             boxes[box_idx, 2] = (y1 + y2) / 2
             boxes[box_idx, 3] = x2 - x1
             boxes[box_idx, 4] = y2 - y1
-
         return img, boxes
 
 # Default Augmentation
@@ -126,7 +125,6 @@ class ToTensor(object):
                     ),
                     dtype=torch.float32
                 ) # H, W, C -> C, H, W
-
         labels = torch.FloatTensor(np.array(labels))
 
         return image, labels
