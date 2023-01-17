@@ -59,3 +59,5 @@ if is_train:
         ])
 ```
 
+## Buildling the Model
+![img](https://miro.medium.com/max/720/1*d4Eg17IVJ0L41e7CTWLLSg.webp)

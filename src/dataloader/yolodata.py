@@ -51,6 +51,7 @@ class Yolodata(Dataset):
             # Image.shape : [H, W, C]
             img_origin_h, img_origin_w = img.shape[:2]
 
+
         annotation_path = '{}{}.txt'.format(
             self.annotation_dir, self.img_names[index])
         bounding_box = []
@@ -58,6 +59,7 @@ class Yolodata(Dataset):
         if not os.path.exists(self.annotation_dir):
             if self.transform is not None:
                 img = self.transform((img, np.array((0, 0, 0, 0, 0))))[0]
+
             return img, None, None
 
         with open(annotation_path, 'r') as file:
@@ -85,7 +87,7 @@ class Yolodata(Dataset):
             #     (batch_idx.view(-1, 1), bounding_box), dim=1)
 
             target_data = torch.cat(
-                (batch_idx.view(-1, 1), torch.tensor(bounding_box)), dim=1)
+                (batch_idx.view(-1, 1), torch.tensor(bounding_box).clone().detach()), dim=1)
 
             return img, target_data, annotation_path
 

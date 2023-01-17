@@ -5,9 +5,9 @@ from PIL import Image, ImageDraw
 
 class YOLOV3Props:
     def __init__(self, path) -> None:
+        self.cfg_path = path
         self.module_defs = []
-        self.set_props(path)
-
+        self.set_props()
         self.hyperparameters: dict = self.convert_type(
             type='net', original_dict=self.module_defs[0])
 
@@ -30,8 +30,8 @@ class YOLOV3Props:
                 'ignore_cls': int(original_dict['ignore_cls']),
             }
 
-    def set_props(self, path):
-        raw_str_list = self.parse_hyperparameter_config_from(path)
+    def set_props(self):
+        raw_str_list = self.parse_hyperparameter_config()
         self.module_defs = []
         for ln in raw_str_list:
             if ln.startswith('['):
@@ -45,11 +45,15 @@ class YOLOV3Props:
                 k, v = k.strip(), v.strip()
                 self.module_defs[-1][k] = v
 
-    def parse_hyperparameter_config_from(self, path):
-        with open(path, 'r') as file:
+    def parse_hyperparameter_config(self):
+        with open(self.cfg_path, 'r') as file:
             lines = [ln.strip() for ln in file.readlines()
                      if ln.strip() and not ln.startswith('#')]
         return lines
+
+    # parse model layer configuration
+    def parse_model_config(self):
+        return self.module_defs
 
 def xywh2xyxy_np(x : np.array):
     y = np.zeros_like(x)
