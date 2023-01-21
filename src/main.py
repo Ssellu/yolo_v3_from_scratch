@@ -59,7 +59,7 @@ class Main:
         model.train()
         model.initialize_weights()
         train = Trainer(model=model, train_loader=train_loader, eval_loader=None, hparam=self.cfg_param)
-
+        train.run()
 
 
     def eval(self):
