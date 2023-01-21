@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import torch
 
 from PIL import Image, ImageDraw
 
@@ -73,3 +74,27 @@ def drawBox(img):
 
     plt.imshow(img_data)
     plt.show()
+
+
+def bbox_iou(pred_box, gt_box, xyxy = False, eps = 1e-9):
+    box = gt_box.T
+
+    if xyxy:
+        b1_x1, b1_y1, b1_x2, b1_y2 = pred_box[0], pred_box[1], pred_box[2], pred_box[3]
+        b2_x1, b2_y1, b2_x2, b2_y2 = gt_box[0], gt_box[1], gt_box[2], gt_box[3]
+    else:
+        b1_x1, b1_y1 = pred_box[0] - pred_box[2] / 2, pred_box[1] - pred_box[3] / 2
+        b1_x2, b1_y2 = pred_box[0] + pred_box[2] / 2, pred_box[1] + pred_box[3] / 2
+        b2_x1, b2_y1 = gt_box[0] - gt_box[2] / 2, gt_box[1] - gt_box[3] / 2
+        b2_x2, b2_y2 = gt_box[0] + gt_box[2] / 2, gt_box[1] + gt_box[3] / 2
+
+    # Calc intersaction
+    inter = (torch.min(b1_x2, b2_x2) - torch.max(b1_x1, b2_x1)).clamp(0) \
+            * (torch.min(b1_y2, b2_y2) - torch.max(b1_y1, b2_y1)).clamp(0)
+
+    # Calc Union
+    b1_w, b1_h = b1_x2 - b1_x1, b1_y2 - b1_y1 + eps
+    b2_w, b2_h = b2_x2 - b2_x1, b2_y2 - b2_y1 + eps
+    union = b1_w * b1_h - b2_w * b2_h - inter + eps
+
+    return inter / union

@@ -50,7 +50,7 @@ class YoloLoss(nn.Module):
                 pwh = torch.exp(ps[...,2:4]) * t_anchors[p_idx]
                 pbox = torch.cat((pxy, pwh), dim=1)
 
-                # iou = bbox_iou(pbox, t_boxes[p_idx])
+                iou = bbox_iou(pbox, t_boxes[p_idx])
 
     def get_targets(self, preds, targets:np.ndarray, yololayer):
         num_anchors = 3
