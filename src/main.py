@@ -36,6 +36,27 @@ class Main:
         args = parser.parse_args()
         return args
 
+    def collate_fn(batch):
+        batch = [data for data in batch if data is not None]
+
+        # Skip in valid data
+        if len(batch) == 0:
+            return
+
+        images, targets, anno_path = list(zip(*batch))
+
+        images = torch.stack([img for img in images])
+
+        # print('!!! images[0].shape : {}, images.shape : {}'.format(images[0].shape, images.shape))
+
+        for i, boxes in enumerate(targets):
+            # set the index of batch
+            boxes[:, 0] = i
+            print(boxes)
+        targets = torch.cat(targets, 0)
+        return images, targets, anno_path
+
+
     def train(self):
         my_transform = get_transformations(
             cfg_param=self.cfg_param, is_train=True)
@@ -50,15 +71,26 @@ class Main:
                                   pin_memory=True,  # Fix the location of image on memory
                                   drop_last=True,
                                   shuffle=True,
-                                  # TODO collate_fn=?
+                                  collate_fn=Main.collate_fn
                                   )
+
 
         model = Darknet53(cfg_path=self.args.cfg,
                           param=self.cfg_param, is_train=True)
-
         model.train()
         model.initialize_weights()
-        train = Trainer(model=model, train_loader=train_loader, eval_loader=None, hparam=self.cfg_param)
+
+        # Set device
+        if torch.cuda.is_available():
+            device = torch.device('cuda:0')
+
+        else:
+            device = torch.device('cpu')
+
+        model = model.to(device)
+
+
+        train = Trainer(model=model, train_loader=train_loader, eval_loader=None, hparam=self.cfg_param, device=device)
         train.run()
 
 

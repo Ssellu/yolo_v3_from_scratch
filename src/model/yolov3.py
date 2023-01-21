@@ -18,6 +18,7 @@ class Darknet53(nn.Module):
         self.n_classes = int(param['class'])
         self.module_cfg = YOLOV3Props(cfg_path).parse_model_config()[1:]
         self.module_list = self.get_layers()
+        self.yolo_layers = [layer[0] for layer in self.module_list if isinstance(layer[0], YoloLayer)]
 
     def get_layers(self):
         module_list = nn.ModuleList()
@@ -183,7 +184,6 @@ class YoloLayer(nn.Module):
         # 4-dim [batch, box_attr * anchor, lh, lw]
         #   -> 5-dim [batch, ahchor, box_attr, lh, lw]
         #       -> [batch, anchor, lh, lw, box_attr]
-        print(x.shape)
         x = x.view(-1, self.anchor.shape[0], self.box_attr_size,
                    self.lh, self.lw).permute(0, 1, 3, 4, 2).contiguous()
         return x
