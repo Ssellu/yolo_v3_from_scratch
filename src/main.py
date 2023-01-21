@@ -8,7 +8,7 @@ from utils.tools import *
 from dataloader.yolodata import *
 from dataloader.data_transforms import *
 from model.yolov3 import *
-
+from train.trainer import *
 
 class Main:
     def __init__(self) -> None:
@@ -57,10 +57,9 @@ class Main:
                           param=self.cfg_param, is_train=True)
 
         model.train()
-        for i, batch in enumerate(train_loader):
-            img, targets, annotation_path = batch
-            output = model(img)
-            print("shape {} {} {}".format(output[0].shape, output[1].shape, output[2].shape,))
+        model.initialize_weights()
+        train = Trainer(model=model, train_loader=train_loader, eval_loader=None, hparam=self.cfg_param)
+
 
 
     def eval(self):
