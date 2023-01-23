@@ -6,6 +6,7 @@ import torch.nn as nn
 from utils.tools import *
 from train.loss import *
 
+
 class Trainer:
     def __init__(self, model: nn.Module, train_loader, eval_loader, hparam, device) -> None:
         self.model = model
@@ -50,11 +51,9 @@ class Trainer:
             # input_img.shape : torch.Size([1, 3, 608, 608]), ==> [batch, channel, image_width, image_height]
             # targets.shape : torch.Size([1, 1, 6]), ==> [1, number of objects, object_info]
 
-
             output = self.model(input_img)
 
             # Get loss between the output and the target
-            self.yololoss.compute_loss(output, targets, self.model.yolo_layers)
-
-            print('!!! output.len : {}, output[0].shape : {}'.format(len(output), output[0].shape))
+            loss, loss_list = self.yololoss.compute_loss(
+                output, targets, self.model.yolo_layers)
 

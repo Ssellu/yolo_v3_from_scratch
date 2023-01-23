@@ -9,6 +9,9 @@ class YoloLoss(nn.Module):
         super(YoloLoss, self).__init__()
         self.device = device
         self.num_class = num_class
+        self.mseloss = nn.MSELoss().to(self.device)
+        self.bceloss = nn.BCELoss().to(self.device)  # BinaryCrossEntropy
+        self.bcelogloss = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([1.0], device=self.device)).to(device)  # Logit BinaryCrossEntropy
 
     def compute_loss(self, pred, targets, yololayer):
         # Bounding box Loss
@@ -50,7 +53,46 @@ class YoloLoss(nn.Module):
                 pwh = torch.exp(ps[...,2:4]) * t_anchors[p_idx]
                 pbox = torch.cat((pxy, pwh), dim=1)
 
-                iou = bbox_iou(pbox, t_boxes[p_idx])
+
+                print(f'pbox.shape : {pbox.shape} / t_boxes[p_idx].shape : {t_boxes[p_idx].shape}')
+                iou = bbox_iou(pbox.T, t_boxes[p_idx])
+
+
+                # Box Loss
+                # MSE
+                # loss_xy = self.mseloss(pbox[..., 0:2], t_boxes[p_idx][..., 0:2])
+                # loss_wh = self.mseloss(pbox[..., 2:4], t_boxes[p_idx][..., 2:4])
+                lbox += (1 - iou).mean()
+
+                # Objectness Loss
+                # GT box and predicted box -> positive : 1 / negative -> 0 (Using IOU)
+                t_obj[batch_id, anchor_id, gy, gx] = iou.detach().clamp(0).type(t_obj.dtype)
+
+
+                # Class Loss
+                if ps.size(1) - 5 > 1:
+                    t = torch.zeros_like(ps[..., 5:], device=self.device)
+                    t[range(num_targets), t_cls[p_idx]] = 1
+                    # print("cls")
+                    # print(t)
+
+                    lcls += self.bcelogloss(ps[:, 5:], t)
+                    # print("ps")
+                    # print(ps[:, 5:])
+
+            lobj += self.bcelogloss(p_out[..., 4], t_obj)
+
+        # Loss Weight
+        lcls *= 0.05
+        lobj *= 1.0
+        lbox *= 0.5
+
+        # Total Loss
+        loss = lcls + lbox + lobj
+        loss_list = [loss.item(), lobj.item(), lcls.item(), lbox.item()]
+
+        return loss, loss_list
+
 
     def get_targets(self, preds, targets:np.ndarray, yololayer):
         num_anchors = 3
