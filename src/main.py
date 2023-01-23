@@ -10,6 +10,8 @@ from dataloader.data_transforms import *
 from model.yolov3 import *
 from train.trainer import *
 
+from tensorboardX import SummaryWriter
+
 class Main:
     def __init__(self) -> None:
         self.args = Main.parse_args()
@@ -90,7 +92,9 @@ class Main:
         model = model.to(device)
 
 
-        train = Trainer(model=model, train_loader=train_loader, eval_loader=None, hparam=self.cfg_param, device=device)
+        torch_writer = SummaryWriter("./output")
+
+        train = Trainer(model=model, train_loader=train_loader, eval_loader=None, hparam=self.cfg_param, device=device, torch_writer=torch_writer)
         train.run()
 
 
