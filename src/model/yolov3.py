@@ -8,9 +8,8 @@ from utils.tools import *
 
 
 class Darknet53(nn.Module):
-    def __init__(self, cfg_path, param, is_train):
+    def __init__(self, cfg_path, param):
         super().__init__()
-        self.is_train = is_train
         self.batch = int(param['batch'])
         self.in_channel = int(param['channels'])
         self.in_width = int(param['width'])
@@ -18,7 +17,8 @@ class Darknet53(nn.Module):
         self.n_classes = int(param['class'])
         self.module_cfg = YOLOV3Props(cfg_path).parse_model_config()[1:]
         self.module_list = self.get_layers()
-        self.yolo_layers = [layer[0] for layer in self.module_list if isinstance(layer[0], YoloLayer)]
+        self.yolo_layers = [
+            layer[0] for layer in self.module_list if isinstance(layer[0], self.YoloLayer)]
 
     def get_layers(self):
         module_list = nn.ModuleList()
@@ -46,8 +46,8 @@ class Darknet53(nn.Module):
                 Darknet53.make_upsample_layer(layer_idx, modules, info)
                 in_channels.append(in_channels[-1])
             elif info['type'] == 'yolo':
-                yolo_layer = YoloLayer(
-                    info, self.in_width, self.in_height, self.is_train)
+                yolo_layer = self.YoloLayer(
+                    info, self.in_width, self.in_height)
                 modules.add_module(
                     'layer_{}_yolo'.format(layer_idx), yolo_layer)
                 in_channels.append(in_channels[-1])
@@ -96,7 +96,7 @@ class Darknet53(nn.Module):
                 layers = [int(y) for y in name['layers'].split(', ')]
                 x = torch.cat([layer_result[layer] for layer in layers], dim=1)
                 layer_result.append(x)
-        return yolo_result
+        return yolo_result if self.training else torch.cat(yolo_result, dim=1)
 
     def make_conv_layer(layer_idx: int, modules: nn.Module, layer_info: dict, in_channel: int):
         filters = int(layer_info['filters'])  # Size of the output channel
@@ -147,43 +147,63 @@ class Darknet53(nn.Module):
             module=nn.Upsample(scale_factor=int(layer_info['stride']), mode='nearest'))
 
 
-class YoloLayer(nn.Module):
-    def __init__(self, layer_info: dict, in_width: int, in_height: int, is_train: bool):
-        super(YoloLayer, self).__init__()
-        self.n_classes = int(layer_info['classes'])
-        self.ignore_thresh = float(layer_info['ignore_thresh'])
-        # bounding_box[4] + objectness[1] + class_probability[n_classes]
-        self.box_attr_size = self.n_classes + 5
+    # Inner Class of Darknet53
+    class YoloLayer(nn.Module):
+        def __init__(self, layer_info: dict, in_width: int, in_height: int):
+            super().__init__()
+            self.n_classes = int(layer_info['classes'])
+            self.ignore_thresh = float(layer_info['ignore_thresh'])
+            # bounding_box[4] + objectness[1] + class_probability[n_classes]
+            self.box_attr_size = self.n_classes + 5
 
-        mask_indices = [int(x) for x in layer_info['mask'].split(',')]  # 1 3 5
-        anchor_all = [[int(y) for y in x.split(',')]
-                      for x in layer_info['anchors'].split(', ')]
-        self.anchor = torch.tensor([anchor_all[x] for x in mask_indices])
-        self.in_width = in_width
-        self.in_height = in_height
-        self.stride = None
-        self.lw = None
-        self.lh = None
-        self.is_train = is_train
+            mask_indices = [int(x) for x in layer_info['mask'].split(',')]  # 1 3 5
+            anchor_all = [[int(y) for y in x.split(',')]
+                        for x in layer_info['anchors'].split(', ')]
+            self.anchor = torch.tensor([anchor_all[x] for x in mask_indices])
+            self.in_width = in_width
+            self.in_height = in_height
+            self.stride = None
+            self.lw = None
+            self.lh = None
 
-    def forward(self, x):
-        # x : input array [N, C, H, W]
-        self.lw, self.lh = x.shape[3], x.shape[2]
-        self.anchor = self.anchor.to(x.device)
-        self.stride = torch.tensor([torch.div(self.in_width, self.lw, rounding_mode='floor'),
-                                    torch.div(self.in_height, self.lh, rounding_mode='floor')]).to(x.device)
+        def forward(self, x):
+            # x : input array [N, C, H, W]
+            self.lw, self.lh = x.shape[3], x.shape[2]
+            self.anchor = self.anchor.to(x.device)
+            self.stride = torch.tensor([torch.div(self.in_width, self.lw, rounding_mode='floor'),
+                                        torch.div(self.in_height, self.lh, rounding_mode='floor')]).to(x.device)
 
-        # For KITTIE data set, n_classes is 8
-        # Therefore, C = (8 + 5) * 3 = 39
-        #                 8 is the mean value of the threshhold
-        #                     5 is value of objectness
-        #                          3 is the number of the anchors
-        # Input shape of image x is [batch, box_attr * anchor, lw, lh]
-        #  e.g. [1, 39, 19, 19]
+            # For KITTIE data set, n_classes is 8
+            # Therefore, C = (8 + 5) * 3 = 39
+            #                 8 is the mean value of the threshhold
+            #                     5 is value of objectness
+            #                          3 is the number of the anchors
+            # Input shape of image x is [batch, box_attr * anchor, lw, lh]
+            #  e.g. [1, 39, 19, 19]
 
-        # 4-dim [batch, box_attr * anchor, lh, lw]
-        #   -> 5-dim [batch, ahchor, box_attr, lh, lw]
-        #       -> [batch, anchor, lh, lw, box_attr]
-        x = x.view(-1, self.anchor.shape[0], self.box_attr_size,
-                   self.lh, self.lw).permute(0, 1, 3, 4, 2).contiguous()
-        return x
+            # 4-dim [batch, box_attr * anchor, lh, lw]
+            #   -> 5-dim [batch, ahchor, box_attr, lh, lw]
+            #       -> [batch, anchor, lh, lw, box_attr]
+            x = x.view(-1, self.anchor.shape[0], self.box_attr_size,
+                    self.lh, self.lw).permute(0, 1, 3, 4, 2).contiguous()
+
+
+
+            if not self.training:
+
+                anchor_grid = self.anchor.view(1, -1, 1, 1, 2).to(x.device)
+                grids = self._make_grid(nx=self.lw, ny=self.lh).to(device=x.device)
+
+                # Get outputs
+                x[...,  :2] = (torch.sigmoid(x[..., :2]) + grids) * self.stride  # Center X, Center Y
+                x[..., 2:4] = torch.exp(x[..., 2:4]) * anchor_grid  # Width, Height
+                x[..., 4: ] = torch.sigmoid(x[...:4])  # Objectness, Confidence
+
+                x = x.view(x.shape[0], -1, self.box_attr_size)
+
+            return x
+
+        def _make_grid(selg, nx, ny):
+            yv, xv = torch.meshgrid([torch.arange(ny), torch.arange(nx)])
+            return torch.stack((xv, yv), 2).view((1, 1, ny, nx, 2)).float()
+

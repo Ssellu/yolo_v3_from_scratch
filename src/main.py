@@ -77,8 +77,24 @@ class Main:
                                   )
 
 
+        # EvalLoader
+        eval_transform = get_transformations(cfg_param=self.cfg_param, is_train=False)
+        eval_data = Yolodata(is_train=False,
+                             transform=eval_transform,
+                             cfg_param=self.cfg_param)
+        eval_loader = DataLoader(eval_data,
+                                  batch_size=self.cfg_param['batch'],
+                                  num_workers=0,
+                                  pin_memory=True,  # Fix the location of image on memory
+                                  drop_last=False,
+                                  shuffle=False,
+                                  collate_fn=Main.collate_fn
+                                  )
+
+
+
         model = Darknet53(cfg_path=self.args.cfg,
-                          param=self.cfg_param, is_train=True)
+                          param=self.cfg_param)
         model.train()
         model.initialize_weights()
 
@@ -102,7 +118,7 @@ class Main:
 
         torch_writer = SummaryWriter("./output")
 
-        train = Trainer(model=model, train_loader=train_loader, eval_loader=None, hparam=self.cfg_param, device=device, torch_writer=torch_writer)
+        train = Trainer(model=model, train_loader=train_loader, eval_loader=eval_loader, hparam=self.cfg_param, device=device, torch_writer=torch_writer)
         train.run()
 
 

@@ -27,33 +27,6 @@ class Trainer:
 
         self.torch_writer = torch_writer
 
-    # Training entry function
-    def run(self):
-        # for-loop in epoch
-        while True:
-
-            if self.max_batch <= self.iter:
-                break
-
-            # 1. Train
-            self.model.train()
-
-            # 2. Loss calculation
-            loss = self.run_iter()
-
-            # 3. Increase index of Epoch
-            self.epoch += 1
-
-            # Save model (chekckpoint)
-            checkpoint_path = os.path.join('./output', 'model_epoch{}.pth'.format(self.epoch))
-            torch.save({'epoch': self.epoch,
-                        'iteration':self.iter,
-                        'model_state_dict':self.model.state_dict(),
-                        'optimizer_state_dict':self.optimizer.state_dict(),
-                        'loss':loss}
-                        , checkpoint_path=checkpoint_path)
-
-
 
     def run_iter(self):
         for i, batch in enumerate(self.train_loader):
@@ -94,3 +67,50 @@ class Trainer:
                     self.torch_writer.add_scalar(ln, lv, self.iter)
 
         return loss
+
+    def run_eval(self):
+        for i, batch in enumerate(self.train_loader):
+
+            # Drop the batch when it has invalid values
+            if batch is None:
+                continue
+
+            input_img, targets, anno_path = batch
+            input_img = input_img.to(device=self.device, non_blocking=True)
+            # input_img.shape : torch.Size([1, 3, 608, 608]), ==> [batch, channel, image_width, image_height]
+            # targets.shape : torch.Size([1, 1, 6]), ==> [1, number of objects, object_info]
+
+
+            with torch.no_grad():
+                output = self.model(input_img)
+                print('eval output shape : {}'.format(output.shape))
+
+    # Training entry function
+    def run(self):
+        # for-loop in epoch
+        while True:
+
+            if self.max_batch <= self.iter:
+                break
+
+            # 1. Train
+            self.model.train()
+
+            # 2. Loss calculation
+            loss = self.run_iter()
+
+            # 3. Increase index of Epoch
+            self.epoch += 1
+
+            # Save model (chekckpoint)
+            checkpoint_path = os.path.join('./output', 'model_epoch{}.pth'.format(self.epoch))
+            torch.save({'epoch': self.epoch,
+                        'iteration':self.iter,
+                        'model_state_dict':self.model.state_dict(),
+                        'optimizer_state_dict':self.optimizer.state_dict(),
+                        'loss':loss}
+                        , checkpoint_path=checkpoint_path)
+
+            # 4. Evaluate
+            self.model.eval()
+            self.run_eval()
