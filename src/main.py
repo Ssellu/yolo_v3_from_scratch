@@ -91,6 +91,14 @@ class Main:
 
         model = model.to(device)
 
+        # Load checkpoint
+        # If checkpoint exists, load the previous checkpoint.
+        if self.args.checkpoint is not None:
+            print("Load pretrained model. {}".format(self.args.checkpoint))
+            checkpoint = torch.load(self.args.checkpoint, map_location= device)
+            # for k, v in checkpoint['model_state_dict'].items():
+            #     print(k, v)
+            model.load_state_dict(checkpoint['model_state_dict'])
 
         torch_writer = SummaryWriter("./output")
 

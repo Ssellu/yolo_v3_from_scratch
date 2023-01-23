@@ -39,6 +39,9 @@ $ mv YOUR_DATASET_LOCATION/data_object_image_2/testing/image_2 \  YOUR_PROJECT_R
 ### 1.4 Test DataLoader
 ```bash
 $ python src/main.py --mode train --cfg yolov3_kitti.cfg
+
+# With pretrained file
+$ python src/main.py --mode train --cfg yolov3_kitti.cfg --checkpoint YOUR_PTH_FILE_PATH.pth
 ```
 
 ## Image Augmentation
@@ -61,3 +64,9 @@ if is_train:
 
 ## Buildling the Model
 ![img](https://miro.medium.com/max/720/1*d4Eg17IVJ0L41e7CTWLLSg.webp)
+
+
+## To See With Tensorboard
+```
+tensorboard --logdir=./output --port=8888
+```

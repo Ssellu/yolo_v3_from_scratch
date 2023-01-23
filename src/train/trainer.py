@@ -32,6 +32,9 @@ class Trainer:
         # for-loop in epoch
         while True:
 
+            if self.max_batch <= self.iter:
+                break
+
             # 1. Train
             self.model.train()
 
